@@ -16,3 +16,8 @@ Use the CLI: `npx -y claude-setups publish` (from the main project). The CLI cre
 ## License
 
 MIT
+
+## Moderation
+
+- `setup:submission` issues are processed by `.github/workflows/ingest.yml`
+- `setup:revoke` issues are processed by `.github/workflows/moderate.yml`; author verification is mandatory (issue opener must match the setup author)
