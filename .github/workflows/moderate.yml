@@ -1,0 +1,61 @@
+name: moderate
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  revoke:
+    if: contains(github.event.issue.labels.*.name, 'setup:revoke')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run revoke
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+        run: |
+          node -e "
+          import('./scripts/revoke.mjs').then(async ({ processRevoke }) => {
+            const r = await processRevoke({
+              dataRoot: 'data',
+              issueBody: process.env.ISSUE_BODY,
+              issueAuthor: process.env.ISSUE_AUTHOR,
+            });
+            if (!r.ok) {
+              console.error('REVOKE_FAILED: ' + r.reason);
+              process.exit(2);
+            }
+            console.log('REVOKE_OK: ' + r.path);
+          }).catch(e => { console.error(e); process.exit(1); });
+          "
+      - name: Commit + close (on success)
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          AUTHOR: ${{ github.event.issue.user.login }}
+        run: |
+          git config user.name "claude-setups-bot"
+          git config user.email "bot@claude-setups.dev"
+          git add -A data/setups/
+          git commit -m "revoke: by $AUTHOR (issue #$ISSUE_NUMBER)"
+          git push
+          gh issue comment "$ISSUE_NUMBER" --body "Revoked. Setup removed from gallery."
+          gh issue close "$ISSUE_NUMBER"
+      - name: Comment on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "Revoke failed. See action logs."
+          gh issue edit "$ISSUE_NUMBER" --add-label "invalid"
