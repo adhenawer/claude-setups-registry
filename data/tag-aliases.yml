@@ -1,0 +1,9 @@
+# Canonicalization map: "py" → "python", "JS" → "javascript", etc.
+# Applied by the ingest Action before committing.
+py: python
+javascript: javascript
+js: javascript
+ts: typescript
+typescript: typescript
+cc: claude-code
+"claude code": claude-code
