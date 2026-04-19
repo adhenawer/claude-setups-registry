@@ -1,0 +1,79 @@
+name: ingest
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  ingest:
+    if: contains(github.event.issue.labels.*.name, 'setup:submission')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Parse aliases
+        id: aliases
+        run: |
+          # Load tag-aliases.yml into JSON via a tiny Python step (no npm deps)
+          python3 -c "
+          import yaml, json
+          with open('data/tag-aliases.yml') as f:
+              aliases = yaml.safe_load(f) or {}
+          with open('/tmp/aliases.json', 'w') as f:
+              json.dump(aliases, f)
+          "
+      - name: Run ingest
+        id: ingest
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+        run: |
+          node -e "
+          import('./scripts/ingest.mjs').then(async ({ ingestIssue }) => {
+            const fs = await import('node:fs/promises');
+            const aliases = JSON.parse(await fs.readFile('/tmp/aliases.json', 'utf-8'));
+            const r = await ingestIssue({
+              dataRoot: 'data',
+              issueBody: process.env.ISSUE_BODY,
+              issueAuthor: process.env.ISSUE_AUTHOR,
+              aliases,
+            });
+            if (!r.ok) {
+              console.error('INGEST_FAILED: ' + r.reason);
+              process.exit(2);
+            }
+            console.log('INGEST_OK: ' + r.path);
+          }).catch(e => { console.error(e); process.exit(1); });
+          "
+      - name: Commit + close (on success)
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          AUTHOR: ${{ github.event.issue.user.login }}
+        run: |
+          # Derive slug from the newly-added file path
+          SLUG=$(git status --porcelain data/setups/ | awk '{print $2}' | head -1 | sed -E 's|data/setups/[^/]+/||; s|\.json$||')
+          git config user.name "claude-setups-bot"
+          git config user.email "bot@claude-setups.dev"
+          git add data/setups/
+          git commit -m "ingest: $AUTHOR/$SLUG (issue #$ISSUE_NUMBER)"
+          git push
+          PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/s/$AUTHOR/$SLUG"
+          gh issue comment "$ISSUE_NUMBER" --body "Published: $PAGES_URL"
+          gh issue close "$ISSUE_NUMBER"
+      - name: Comment + label on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "Validation failed. Check the action logs."
+          gh issue edit "$ISSUE_NUMBER" --add-label "invalid"
