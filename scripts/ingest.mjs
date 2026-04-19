@@ -10,7 +10,7 @@ export async function ingestIssue({ dataRoot, issueBody, issueAuthor, aliases = 
     return { ok: false, reason: `invalid JSON in issue body: ${e.message}` };
   }
   try {
-    validate(descriptor, { issueAuthor });
+    await validate(descriptor, { issueAuthor });
   } catch (e) {
     return { ok: false, reason: `validation: ${e.message}` };
   }

@@ -10,8 +10,25 @@
     <h1>claude-setups</h1>
     <p>Community Claude Code setups. Publish with <code>npx -y claude-setups publish</code>.</p>
   </header>
+  <nav id="filters">
+    <label>Specialty:</label>
+    <select id="specialty-filter" aria-label="Filter by specialty">
+      <option value="">all</option>
+      <!-- FILTER OPTIONS -->
+    </select>
+  </nav>
   <main id="setups-list">
-    <!-- Populated at build time -->
+    <!-- CARDS -->
   </main>
+  <script>
+    document.getElementById('specialty-filter').addEventListener('change', (e) => {
+      const val = e.target.value;
+      const cards = document.querySelectorAll('[data-specialties]');
+      for (const card of cards) {
+        const specs = (card.dataset.specialties || '').split(',');
+        card.style.display = (!val || specs.includes(val)) ? '' : 'none';
+      }
+    });
+  </script>
 </body>
 </html>

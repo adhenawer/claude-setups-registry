@@ -27,12 +27,15 @@ async function listSetups() {
 
 function renderCard(d) {
   const tags = d.tags.map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('');
+  const specs = (d.specialties || []).join(',');
+  const specsHtml = (d.specialties || []).map(s => `<span class="specialty">${escapeHtml(s)}</span>`).join('');
   const href = `s/${d.id.author}/${d.id.slug}.html`;
   return `
-    <article class="setup-card">
+    <article class="setup-card" data-specialties="${escapeHtml(specs)}">
       <h2><a href="${href}">${escapeHtml(d.title)}</a></h2>
       <p class="author">by <a href="${escapeHtml(d.author.url)}">${escapeHtml(d.id.author)}</a> · ${d.createdAt.slice(0, 10)}</p>
       <p>${escapeHtml(d.description)}</p>
+      <div class="specialties">${specsHtml}</div>
       <div class="tags">${tags}</div>
     </article>
   `;
@@ -44,6 +47,7 @@ function escapeHtml(s) {
 
 function renderDetail(template, d) {
   const mirror = `https://${process.env.GITHUB_REPOSITORY_OWNER || 'adhenawer'}.github.io/${process.env.GITHUB_REPOSITORY?.split('/')[1] || 'claude-setups-registry'}/s/${d.id.author}/${d.id.slug}.json`;
+  const specialtiesHtml = (d.specialties || []).map(s => `<span class="specialty">${escapeHtml(s)}</span>`).join('');
   return template
     .replace(/%%TITLE%%/g, escapeHtml(d.title))
     .replace(/%%AUTHOR%%/g, escapeHtml(d.id.author))
@@ -52,6 +56,7 @@ function renderDetail(template, d) {
     .replace(/%%CREATED_AT%%/g, d.createdAt.slice(0, 10))
     .replace(/%%DESCRIPTION%%/g, escapeHtml(d.description))
     .replace(/%%MIRROR_URL%%/g, mirror)
+    .replace(/%%SPECIALTIES_HTML%%/g, specialtiesHtml)
     .replace(/%%DESCRIPTOR_JSON%%/g, escapeHtml(JSON.stringify(d, null, 2)));
 }
 
@@ -60,8 +65,14 @@ async function build() {
   await copyFile(join(SITE_DIR, 'styles.css'), join(OUT_DIR, 'styles.css'));
 
   const setups = await listSetups();
+
+  const uniqueSpecs = [...new Set(setups.flatMap(s => s.descriptor.specialties || []))].sort();
+  const options = uniqueSpecs.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+
   const indexTpl = await readFile(join(SITE_DIR, 'index.html'), 'utf-8');
-  const index = indexTpl.replace('<!-- Populated at build time -->', setups.map(s => renderCard(s.descriptor)).join(''));
+  const index = indexTpl
+    .replace('<!-- CARDS -->', setups.map(s => renderCard(s.descriptor)).join(''))
+    .replace('<!-- FILTER OPTIONS -->', options);
   await writeFile(join(OUT_DIR, 'index.html'), index);
 
   const detailTpl = await readFile(join(SITE_DIR, 'setup.html'), 'utf-8');

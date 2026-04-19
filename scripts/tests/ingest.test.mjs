@@ -12,6 +12,7 @@ const VALID_BODY = JSON.stringify({
   author: { handle: 'alice', url: 'https://github.com/alice' },
   createdAt: '2026-04-19T00:00:00Z', license: 'MIT',
   plugins: [], marketplaces: [], mcpServers: [],
+  specialties: ['backend'],
   bundle: { present: false }
 }, null, 2);
 

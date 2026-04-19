@@ -5,3 +5,8 @@ pre { background: #f6f8fa; padding: 1em; border-radius: 6px; overflow: auto; }
 .setup-card h2 { margin: 0; }
 .setup-card .tags { margin-top: 0.5em; }
 .setup-card .tag { display: inline-block; background: #f0f0f0; padding: 0.1em 0.5em; border-radius: 3px; font-size: 0.85em; margin-right: 0.25em; }
+.specialty { display: inline-block; background: #e6f4ea; color: #1e6b2f; padding: 0.1em 0.5em; border-radius: 3px; font-size: 0.85em; margin-right: 0.25em; font-weight: 500; }
+.specialties { margin: 0.5em 0; }
+#filters { background: #f6f8fa; padding: 0.5em 1em; border-radius: 6px; margin-bottom: 1em; }
+#filters label { margin-right: 0.5em; font-weight: 600; }
+#filters select { padding: 0.25em 0.5em; }
