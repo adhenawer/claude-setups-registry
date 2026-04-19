@@ -1,0 +1,9 @@
+{
+  "name": "claude-setups-registry-scripts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test scripts/tests/*.test.mjs"
+  }
+}
