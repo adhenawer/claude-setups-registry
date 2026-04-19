@@ -23,3 +23,29 @@ body:
       render: json
     validations:
       required: true
+  - type: dropdown
+    id: specialties
+    attributes:
+      label: Specialties (pick 1–3)
+      description: Primary focus area of this setup. Used for gallery filtering.
+      multiple: true
+      options:
+        - backend
+        - frontend
+        - fullstack
+        - mobile
+        - devops
+        - data-engineer
+        - data-science
+        - bi-analytics
+        - security
+        - qa-testing
+        - ux-design
+        - product
+        - technical-writing
+        - game-dev
+        - embedded
+        - research
+        - other
+    validations:
+      required: true
