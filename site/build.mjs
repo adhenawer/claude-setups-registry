@@ -51,6 +51,8 @@ function renderDetail(template, d) {
   return template
     .replace(/%%TITLE%%/g, escapeHtml(d.title))
     .replace(/%%AUTHOR%%/g, escapeHtml(d.id.author))
+    .replace(/%%SLUG%%/g, escapeHtml(d.id.slug))
+    .replace(/%%SHORT_ID%%/g, escapeHtml(`${d.id.author}/${d.id.slug}`))
     .replace(/%%AUTHOR_URL%%/g, escapeHtml(d.author.url))
     .replace(/%%VERSION%%/g, String(d.version))
     .replace(/%%CREATED_AT%%/g, d.createdAt.slice(0, 10))
