@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>claude-setups — %%TITLE%%</title>
+  <link rel="stylesheet" href="../../../styles.css">
+</head>
+<body>
+  <header>
+    <a href="../../../index.html">← back to gallery</a>
+    <h1>%%TITLE%%</h1>
+    <p class="author">by <a href="%%AUTHOR_URL%%">%%AUTHOR%%</a> · v%%VERSION%% · %%CREATED_AT%%</p>
+  </header>
+  <main>
+    <p class="description">%%DESCRIPTION%%</p>
+    <section>
+      <h2>Mirror this setup</h2>
+      <pre><code>npx -y claude-setups mirror %%MIRROR_URL%%</code></pre>
+      <p><em>Note: mirror command ships in v0.2.</em></p>
+    </section>
+    <section>
+      <h2>Descriptor</h2>
+      <pre id="descriptor">%%DESCRIPTOR_JSON%%</pre>
+    </section>
+  </main>
+</body>
+</html>
