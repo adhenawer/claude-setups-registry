@@ -1,0 +1,25 @@
+name: Setup submission
+description: Submit a claude-setups descriptor (used by the CLI fallback path).
+title: "[setup] submission"
+labels: ["setup:submission"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Setup submission
+
+        This form is the **fallback path** for users without the `gh` CLI.
+        Prefer `npx -y claude-setups publish` — it generates the descriptor
+        and files this issue for you automatically.
+
+        The descriptor JSON below is auto-filled by the CLI via URL params.
+        If you're filling it by hand, copy the JSON produced by
+        `npx -y claude-setups publish --dry-run` (not yet implemented in v0.1).
+  - type: textarea
+    id: descriptor
+    attributes:
+      label: Descriptor JSON
+      description: The full claude-setups descriptor. Do NOT edit unless you know what you're doing.
+      render: json
+    validations:
+      required: true
