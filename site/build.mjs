@@ -45,6 +45,26 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+function markdownToHtml(md) {
+  if (!md) return '';
+  return md
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => `<pre><code>${escapeHtml(code.trim())}</code></pre>`)
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
+    .replace(/\n{2,}/g, '</p><p>')
+    .replace(/^(?!<[hup]|<li|<pre|<ul)(.+)$/gm, '<p>$1</p>')
+    .replace(/<p><\/p>/g, '');
+}
+
+function renderOverviewSection(d) {
+  if (!d.overview) return '';
+  return `<h2>About this setup</h2>\n<div class="overview-content">${markdownToHtml(d.overview)}</div>`;
+}
+
 function renderBundleSection(d) {
   if (!d.bundle?.present || !d.bundle.files?.length) {
     return '<p>No bundle (descriptor-only setup — only plugin/marketplace/MCP identifiers).</p>';
@@ -81,7 +101,8 @@ function renderDetail(template, d) {
     .replace(/%%MIRROR_URL%%/g, mirror)
     .replace(/%%SPECIALTIES_HTML%%/g, specialtiesHtml)
     .replace(/%%DESCRIPTOR_JSON%%/g, escapeHtml(JSON.stringify(d, null, 2)))
-    .replace(/%%BUNDLE_SECTION%%/g, renderBundleSection(d));
+    .replace(/%%BUNDLE_SECTION%%/g, renderBundleSection(d))
+    .replace(/%%OVERVIEW_SECTION%%/g, renderOverviewSection(d));
 }
 
 async function build() {
