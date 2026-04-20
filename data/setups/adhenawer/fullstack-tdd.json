@@ -1,0 +1,148 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": {
+    "author": "adhenawer",
+    "slug": "fullstack-tdd"
+  },
+  "version": 1,
+  "title": "Fullstack dev — TDD & token efficiency",
+  "description": "Portuguese developer's setup emphasizing code quality via TDD, token optimization with RTK CLI, and agent-driven development. Includes comprehensive best practices guide (CLAUDE.md) covering quality, token economy, and skills orchestration.",
+  "tags": [
+    "tdd",
+    "token-optimization",
+    "fullstack",
+    "code-quality",
+    "agent-driven",
+    "portuguese",
+    "best-practices",
+    "rust-tools"
+  ],
+  "author": {
+    "handle": "adhenawer",
+    "url": "https://github.com/adhenawer"
+  },
+  "createdAt": "2026-04-20T04:07:25.304Z",
+  "license": "MIT",
+  "plugins": [
+    {
+      "name": "tray-api",
+      "marketplace": "tray-plugins",
+      "version": "1.0.0"
+    },
+    {
+      "name": "context7",
+      "marketplace": "claude-plugins-official",
+      "version": "unknown"
+    },
+    {
+      "name": "frontend-design",
+      "marketplace": "claude-plugins-official",
+      "version": "unknown"
+    },
+    {
+      "name": "github",
+      "marketplace": "claude-plugins-official",
+      "version": "unknown"
+    },
+    {
+      "name": "playwright",
+      "marketplace": "claude-plugins-official",
+      "version": "unknown"
+    },
+    {
+      "name": "claude-hud",
+      "marketplace": "claude-hud",
+      "version": "0.0.12"
+    },
+    {
+      "name": "claude-mem",
+      "marketplace": "thedotmack",
+      "version": "12.1.5"
+    },
+    {
+      "name": "superpowers",
+      "marketplace": "claude-plugins-official",
+      "version": "5.0.7"
+    },
+    {
+      "name": "plugin-dev",
+      "marketplace": "claude-plugins-official",
+      "version": "unknown"
+    },
+    {
+      "name": "snapshot",
+      "marketplace": "claude-snapshot",
+      "version": "0.2.0"
+    },
+    {
+      "name": "token-optimizer",
+      "marketplace": "alexgreensh-token-optimizer",
+      "version": "5.4.25"
+    }
+  ],
+  "marketplaces": [
+    {
+      "name": "claude-plugins-official",
+      "source": "github",
+      "repo": "anthropics/claude-plugins-official"
+    },
+    {
+      "name": "tray-plugins",
+      "source": "github",
+      "repo": "tray-tecnologia/tray-api-claude-plugin"
+    },
+    {
+      "name": "claude-hud",
+      "source": "github",
+      "repo": "jarrodwatts/claude-hud"
+    },
+    {
+      "name": "thedotmack",
+      "source": "github",
+      "repo": "thedotmack/claude-mem"
+    },
+    {
+      "name": "claude-snapshot",
+      "source": "github",
+      "repo": "adhenawer/claude-snapshot"
+    },
+    {
+      "name": "alexgreensh-token-optimizer",
+      "source": "github",
+      "repo": "alexgreensh/token-optimizer"
+    }
+  ],
+  "mcpServers": [],
+  "specialties": [
+    "fullstack"
+  ],
+  "bundle": {
+    "present": true,
+    "sha256": "6e2a9b0caa43dfa1d1ba71f23ceac97a50142a54347886808974c6b387289eff",
+    "files": [
+      {
+        "path": "CLAUDE.md",
+        "size": 5636,
+        "sha256": "9eea24369527487665a587dc05af8b5a1277cf52a983925a0ba3323d7af96179"
+      },
+      {
+        "path": "RTK.md",
+        "size": 964,
+        "sha256": "9fe007d9d7ca790f35b48bd12099e1b3a1dae05caf296dba3ddbe2621ddb02dc"
+      },
+      {
+        "path": "hooks/.rtk-hook.sha256",
+        "size": 81,
+        "sha256": "46c9f6860a6535d7a9abb4cb4aa27cee04cf3a208c0782ee49507d54832e68c2"
+      },
+      {
+        "path": "hooks/rtk-rewrite.sh",
+        "size": 3147,
+        "sha256": "ef0d630994fd7ef5f2b84fb66cd6249c493bb8736bcacd4734d7c798125018fb"
+      }
+    ],
+    "url": "https://adhenawer.github.io/claude-setups-registry/bundles/adhenawer/fullstack-tdd.tar.gz",
+    "pendingBranch": "bundle/adhenawer-fullstack-tdd-1776658045304"
+  },
+  "overview": "## Claude Code Setup Overview\n\nA productivity-focused Claude Code configuration built around token efficiency, persistent memory, and structured agentic workflows.\n\n**superpowers** provides a discipline layer of skills — brainstorming, TDD, debugging, planning, and parallel subagent dispatch — that enforce consistent workflows across sessions. **claude-mem** gives Claude cross-session memory and structural code search via AST parsing, eliminating repeated context-setting. **token-optimizer** audits context health and coaches token-efficient habits to keep sessions sharp.\n\n**RTK (Rust Token Killer)** is a CLI proxy that rewrites common shell commands through a hook, stripping noise from output before it hits the context window — the bundle includes the hook script and its checksum. **CLAUDE.md** encodes project conventions, model routing rules, and agent best practices as standing instructions loaded every session.\n\n**context7** pulls live library documentation on demand, keeping answers accurate regardless of training cutoffs. **frontend-design** specializes in production-quality UI generation with high design standards. **playwright** enables browser automation and end-to-end UI testing directly from the agent. **github** surfaces PR and issue workflows without leaving the terminal.\n\n**claude-hud** renders a live status line with session metrics. **plugin-dev** provides guided workflows for building and publishing Claude Code plugins. **snapshot** lets you export, inspect, and apply this entire setup as a portable bundle. **tray-api** extends Claude with Tray.io integration for workflow automation.\n\nMirror this setup to get structured agentic discipline, persistent memory, and aggressive token hygiene out of the box."
+}
