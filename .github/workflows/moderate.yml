@@ -46,7 +46,9 @@ jobs:
         run: |
           git config user.name "claude-setups-bot"
           git config user.email "bot@claude-setups.dev"
-          git add -A data/setups/ data/bundles/
+          for dir in data/setups data/bundles; do
+            [ -d "$dir" ] && git add -A "$dir"
+          done
           if git diff --cached --quiet; then
             echo "Nothing to commit (already revoked). Skipping commit."
           else

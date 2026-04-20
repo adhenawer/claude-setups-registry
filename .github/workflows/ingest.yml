@@ -83,7 +83,9 @@ jobs:
           SLUG=$(git status --porcelain data/setups/ | awk '{print $2}' | head -1 | sed -E 's|data/setups/[^/]+/||; s|\.json$||')
           git config user.name "claude-setups-bot"
           git config user.email "bot@claude-setups.dev"
-          git add data/setups/ data/bundles/
+          for dir in data/setups data/bundles; do
+            [ -d "$dir" ] && git add "$dir"
+          done
           git commit -m "ingest: $AUTHOR/$SLUG (issue #$ISSUE_NUMBER)"
           for i in 1 2 3; do
             git pull --rebase origin "$(git rev-parse --abbrev-ref HEAD)" && git push && break
