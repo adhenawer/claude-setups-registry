@@ -45,7 +45,7 @@ describe('processRevoke', () => {
     } finally { await rm(root, { recursive: true }); }
   });
 
-  it('rejects when target file does not exist', async () => {
+  it('is idempotent when target file does not exist (already revoked)', async () => {
     const { processRevoke } = await import('../revoke.mjs');
     const root = await setupFake();
     try {
@@ -54,8 +54,28 @@ describe('processRevoke', () => {
         issueBody: JSON.stringify({ author: 'alice', slug: 'nonexistent' }),
         issueAuthor: 'alice',
       });
-      assert.equal(r.ok, false);
-      assert.match(r.reason, /not found/i);
+      assert.equal(r.ok, true);
+      assert.equal(r.alreadyRevoked, true);
+    } finally { await rm(root, { recursive: true }); }
+  });
+
+  it('also removes the bundle tar.gz when present', async () => {
+    const { processRevoke } = await import('../revoke.mjs');
+    const root = await setupFake();
+    const bundlesDir = join(root, 'bundles', 'alice');
+    await mkdir(bundlesDir, { recursive: true });
+    await writeFile(join(bundlesDir, 'demo.tar.gz'), 'binary');
+    try {
+      const r = await processRevoke({
+        dataRoot: root,
+        issueBody: JSON.stringify({ author: 'alice', slug: 'demo' }),
+        issueAuthor: 'alice',
+      });
+      assert.equal(r.ok, true);
+      assert.equal(r.setupRemoved, true);
+      assert.equal(r.bundleRemoved, true);
+      const remainingBundles = await readdir(bundlesDir);
+      assert.equal(remainingBundles.length, 0);
     } finally { await rm(root, { recursive: true }); }
   });
 });

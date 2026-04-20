@@ -15,12 +15,30 @@ export async function processRevoke({ dataRoot, issueBody, issueAuthor }) {
     return { ok: false, reason: `authorization failed: issue author "${issueAuthor}" does not match setup author "${author}"` };
   }
 
-  const path = join(dataRoot, 'setups', author, `${slug}.json`);
+  const setupPath = join(dataRoot, 'setups', author, `${slug}.json`);
+  const bundlePath = join(dataRoot, 'bundles', author, `${slug}.tar.gz`);
+
+  let setupRemoved = false;
+  let bundleRemoved = false;
+
   try {
-    await access(path);
-  } catch {
-    return { ok: false, reason: `not found: ${author}/${slug}` };
-  }
-  await unlink(path);
-  return { ok: true, path };
+    await access(setupPath);
+    await unlink(setupPath);
+    setupRemoved = true;
+  } catch {}
+
+  try {
+    await access(bundlePath);
+    await unlink(bundlePath);
+    bundleRemoved = true;
+  } catch {}
+
+  // Idempotent: already-revoked is still success
+  return {
+    ok: true,
+    path: setupPath,
+    setupRemoved,
+    bundleRemoved,
+    alreadyRevoked: !setupRemoved && !bundleRemoved,
+  };
 }
