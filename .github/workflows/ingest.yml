@@ -15,9 +15,29 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Merge bundle-pending branch content if referenced
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          node -e "
+          const body = process.env.ISSUE_BODY;
+          try {
+            const d = JSON.parse(body);
+            if (d.bundle && d.bundle.present && d.bundle.pendingBranch) {
+              console.log('BRANCH:' + d.bundle.pendingBranch);
+            }
+          } catch {}
+          " | tee /tmp/branch.txt
+          BRANCH=$(grep '^BRANCH:' /tmp/branch.txt | sed 's/^BRANCH://')
+          if [ -n "$BRANCH" ]; then
+            echo "Fetching bundle from $BRANCH"
+            git fetch origin "$BRANCH"
+            git checkout "origin/$BRANCH" -- bundle-pending/
+          fi
       - name: Parse aliases
         id: aliases
         run: |
@@ -63,12 +83,27 @@ jobs:
           SLUG=$(git status --porcelain data/setups/ | awk '{print $2}' | head -1 | sed -E 's|data/setups/[^/]+/||; s|\.json$||')
           git config user.name "claude-setups-bot"
           git config user.email "bot@claude-setups.dev"
-          git add data/setups/
+          git add data/setups/ data/bundles/
           git commit -m "ingest: $AUTHOR/$SLUG (issue #$ISSUE_NUMBER)"
           git push
           PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/s/$AUTHOR/$SLUG"
           gh issue comment "$ISSUE_NUMBER" --body "Published: $PAGES_URL"
           gh issue close "$ISSUE_NUMBER"
+      - name: Delete pending bundle branch (on success)
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          BRANCH=$(node -e "
+          try {
+            const d = JSON.parse(process.env.ISSUE_BODY);
+            if (d.bundle?.pendingBranch) console.log(d.bundle.pendingBranch);
+          } catch {}
+          ")
+          if [ -n "$BRANCH" ]; then
+            gh api -X DELETE "repos/${{ github.repository }}/git/refs/heads/$BRANCH" || true
+          fi
       - name: Comment + label on failure
         if: failure()
         env:

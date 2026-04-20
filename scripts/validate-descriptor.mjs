@@ -23,6 +23,38 @@ async function getSpecialties() {
   return map;
 }
 
+const ALLOWED_PREFIXES = ['hooks/', 'skills/', 'commands/', 'agents/'];
+
+function isAllowedBundlePath(p) {
+  if (/^[a-z0-9_-]+\.md$/i.test(p)) return true;
+  return ALLOWED_PREFIXES.some(prefix => p.startsWith(prefix));
+}
+
+function validateBundle(bundle) {
+  if (!bundle || typeof bundle !== 'object') throw new Error('bundle must be an object');
+  if (typeof bundle.present !== 'boolean') throw new Error('bundle.present must be boolean');
+  if (!bundle.present) return;
+
+  if (!bundle.sha256) throw new Error('bundle.sha256 required when present');
+  if (!bundle.pendingBranch) throw new Error('bundle.pendingBranch required when present');
+  if (!Array.isArray(bundle.files)) throw new Error('bundle.files must be array');
+
+  for (const f of bundle.files) {
+    if (!f.path) throw new Error('bundle.files[].path required');
+    if (f.path.startsWith('/')) throw new Error(`bundle.files[]: absolute path rejected: ${f.path}`);
+    if (f.path.includes('..')) throw new Error(`bundle.files[]: traversal rejected: ${f.path}`);
+    if (f.path === 'settings.json' || f.path.startsWith('settings.')) {
+      throw new Error(`bundle must NEVER include settings.json: ${f.path}`);
+    }
+    if (f.path === '.claude.json' || f.path.includes('/.claude.json')) {
+      throw new Error(`bundle must NEVER include .claude.json: ${f.path}`);
+    }
+    if (!isAllowedBundlePath(f.path)) {
+      throw new Error(`bundle.files[]: disallowed path (not under allowed prefix): ${f.path}`);
+    }
+  }
+}
+
 export async function validate(d, opts = {}) {
   if (!d || typeof d !== 'object') throw new Error('descriptor not an object');
   if (!d.schemaVersion) throw new Error('missing schemaVersion');
@@ -57,5 +89,8 @@ export async function validate(d, opts = {}) {
   if (opts.issueAuthor && opts.issueAuthor !== d.id.author) {
     throw new Error(`descriptor author "${d.id.author}" does not match issue author "${opts.issueAuthor}"`);
   }
+
+  if (d.bundle) validateBundle(d.bundle);
+
   return true;
 }
