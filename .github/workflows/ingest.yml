@@ -85,7 +85,11 @@ jobs:
           git config user.email "bot@claude-setups.dev"
           git add data/setups/ data/bundles/
           git commit -m "ingest: $AUTHOR/$SLUG (issue #$ISSUE_NUMBER)"
-          git push
+          for i in 1 2 3; do
+            git pull --rebase origin "$(git rev-parse --abbrev-ref HEAD)" && git push && break
+            echo "Push failed, retry $i/3..."
+            sleep 2
+          done
           PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/#/setup/$AUTHOR/$SLUG"
           gh issue comment "$ISSUE_NUMBER" --body "Published: $PAGES_URL"
           gh issue close "$ISSUE_NUMBER"
