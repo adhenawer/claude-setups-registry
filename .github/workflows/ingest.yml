@@ -35,7 +35,7 @@ jobs:
           BRANCH=$(grep '^BRANCH:' /tmp/branch.txt | sed 's/^BRANCH://')
           if [ -n "$BRANCH" ]; then
             echo "Fetching bundle from $BRANCH"
-            git fetch origin "$BRANCH"
+            git fetch origin "refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
             git checkout "origin/$BRANCH" -- bundle-pending/
           fi
       - name: Parse aliases
