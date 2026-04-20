@@ -163,7 +163,7 @@
       '<div class="brand">claude-setups<span class="brand-sub"> / gallery</span></div></div>' +
       '<div class="topbar-right">' +
         '<a class="btn-ghost btn-ghost-sm" href="#/docs" data-act="docs">docs</a>' +
-        '<a class="btn-ghost btn-ghost-sm" href="https://github.com/adhenawer/claude-setups-registry" target="_blank" rel="noreferrer">' +
+        '<a class="btn-ghost btn-ghost-sm" href="https://github.com/adhenawer/claude-setups" target="_blank" rel="noreferrer">' +
         ICONS.github + ' repo</a>' +
         '<button class="iconbtn" data-act="theme" aria-label="Toggle theme">' +
           (state.theme === 'dark' ? ICONS.sun : ICONS.moon) +
@@ -215,7 +215,7 @@
         '<h1 class="hero-title"><span class="ink">Claude Code</span> setups<br/>built by the <span class="underlined">community</span>.</h1>' +
         '<p class="hero-sub">Discover how other developers configure Claude — hooks, instructions, skills, MCPs — and clone an entire setup with <strong>one command</strong>. Your secrets never leave your machine.</p>' +
         '<div class="hero-cta">' + copyCmdHtml('npx -y claude-setups publish', 'lg') +
-          '<a class="btn-ghost" href="https://github.com/adhenawer/claude-setups-registry" target="_blank" rel="noreferrer">' +
+          '<a class="btn-ghost" href="https://github.com/adhenawer/claude-setups" target="_blank" rel="noreferrer">' +
           ICONS.github + ' view on GitHub</a></div>' +
       '</div>' +
       '<div class="hero-right" aria-hidden>' + heroVisualHtml() + '</div>' +
