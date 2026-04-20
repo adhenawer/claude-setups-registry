@@ -78,20 +78,37 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           AUTHOR: ${{ github.event.issue.user.login }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
-          # Derive slug from the newly-added file path
-          SLUG=$(git status --porcelain data/setups/ | awk '{print $2}' | head -1 | sed -E 's|data/setups/[^/]+/||; s|\.json$||')
+          SLUG=$(node -e "console.log(JSON.parse(process.env.ISSUE_BODY).id.slug)")
           git config user.name "claude-setups-bot"
           git config user.email "bot@claude-setups.dev"
-          for dir in data/setups data/bundles; do
-            [ -d "$dir" ] && git add "$dir"
+          # Remove the bundle-pending/ working-tree file if ingest moved it (stages the deletion)
+          rm -rf bundle-pending
+          for dir in data/setups data/bundles bundle-pending; do
+            [ -e "$dir" ] || git ls-files --error-unmatch "$dir" >/dev/null 2>&1 && git add -A "$dir" 2>/dev/null || true
           done
-          git commit -m "ingest: $AUTHOR/$SLUG (issue #$ISSUE_NUMBER)"
-          for i in 1 2 3; do
-            git pull --rebase origin "$(git rev-parse --abbrev-ref HEAD)" && git push && break
-            echo "Push failed, retry $i/3..."
-            sleep 2
-          done
+          git add -A data/setups data/bundles 2>/dev/null || true
+          git add -A bundle-pending 2>/dev/null || true
+          PUSH_OK=0
+          if git diff --cached --quiet; then
+            echo "Nothing to commit"
+            PUSH_OK=1
+          else
+            git commit -m "ingest: $AUTHOR/$SLUG (issue #$ISSUE_NUMBER)"
+            for i in 1 2 3; do
+              if git pull --rebase origin "$(git rev-parse --abbrev-ref HEAD)" && git push; then
+                PUSH_OK=1
+                break
+              fi
+              echo "Push failed, retry $i/3..."
+              sleep 2
+            done
+          fi
+          if [ "$PUSH_OK" != "1" ]; then
+            echo "::error::Failed to push ingest commit after 3 retries"
+            exit 1
+          fi
           PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/#/setup/$AUTHOR/$SLUG"
           gh issue comment "$ISSUE_NUMBER" --body "Published: $PAGES_URL"
           gh issue close "$ISSUE_NUMBER"

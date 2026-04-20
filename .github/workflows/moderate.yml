@@ -49,15 +49,24 @@ jobs:
           for dir in data/setups data/bundles; do
             [ -d "$dir" ] && git add -A "$dir"
           done
+          PUSH_OK=0
           if git diff --cached --quiet; then
             echo "Nothing to commit (already revoked). Skipping commit."
+            PUSH_OK=1
           else
             git commit -m "revoke: by $AUTHOR (issue #$ISSUE_NUMBER)"
             for i in 1 2 3; do
-              git pull --rebase origin "$(git rev-parse --abbrev-ref HEAD)" && git push && break
+              if git pull --rebase origin "$(git rev-parse --abbrev-ref HEAD)" && git push; then
+                PUSH_OK=1
+                break
+              fi
               echo "Push failed, retry $i/3..."
               sleep 2
             done
+          fi
+          if [ "$PUSH_OK" != "1" ]; then
+            echo "::error::Failed to push revoke commit after 3 retries"
+            exit 1
           fi
           gh issue comment "$ISSUE_NUMBER" --body "Revoked. Setup removed from gallery."
           gh issue close "$ISSUE_NUMBER"
