@@ -1,9 +1,62 @@
-import { readdir, readFile, writeFile, mkdir, copyFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { readdir, readFile, writeFile, mkdir, copyFile, rm, stat, cp } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { join, extname } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
 
 const DATA_DIR = 'data/setups';
+const BUNDLES_DIR = 'data/bundles';
 const SITE_DIR = 'site';
 const OUT_DIR = 'site-build';
+const SPECIALTIES_YML = 'data/specialties.yml';
+const MAX_FILE_BYTES = 120 * 1024;
+
+const TEXT_EXTS = new Set([
+  'md', 'sh', 'bash', 'zsh', 'fish', 'txt', 'json', 'yml', 'yaml', 'toml',
+  'js', 'mjs', 'cjs', 'ts', 'tsx', 'jsx', 'py', 'rb', 'rs', 'go', 'java',
+  'css', 'scss', 'html', 'xml', 'ini', 'cfg', 'env', 'conf', 'lua', 'vim',
+  'sql', 'dockerfile', 'makefile', 'gitignore', 'editorconfig',
+]);
+
+function kindFor(path) {
+  const lower = path.toLowerCase();
+  const base = lower.split('/').pop();
+  if (base === 'dockerfile' || base === 'makefile') return base;
+  const ext = extname(lower).slice(1);
+  return ext || 'txt';
+}
+
+function isTextFile(path) {
+  const lower = path.toLowerCase();
+  const base = lower.split('/').pop();
+  if (base.startsWith('.') && base.length > 1) return true;
+  if (base === 'dockerfile' || base === 'makefile' || base === 'license' || base === 'readme') return true;
+  const ext = extname(lower).slice(1);
+  return TEXT_EXTS.has(ext);
+}
+
+function parseFlatYaml(src) {
+  const out = {};
+  for (const raw of src.split('\n')) {
+    const line = raw.replace(/\s+$/, '');
+    if (!line || line.startsWith('#')) continue;
+    const m = line.match(/^([A-Za-z0-9_-]+)\s*:\s*(.*)$/);
+    if (!m) continue;
+    let val = m[2].trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
+    }
+    out[m[1]] = val;
+  }
+  return out;
+}
+
+async function loadSpecialtyLabels() {
+  try {
+    const src = await readFile(SPECIALTIES_YML, 'utf-8');
+    return parseFlatYaml(src);
+  } catch { return {}; }
+}
 
 async function listSetups() {
   const results = [];
@@ -21,123 +74,154 @@ async function listSetups() {
       results.push({ path: p, descriptor: d });
     }
   }
-  results.sort((a, b) => b.descriptor.createdAt.localeCompare(a.descriptor.createdAt));
+  results.sort((a, b) => (b.descriptor.createdAt || '').localeCompare(a.descriptor.createdAt || ''));
   return results;
 }
 
-function renderCard(d) {
-  const tags = d.tags.map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('');
-  const specs = (d.specialties || []).join(',');
-  const specsHtml = (d.specialties || []).map(s => `<span class="specialty">${escapeHtml(s)}</span>`).join('');
-  const href = `s/${d.id.author}/${d.id.slug}.html`;
-  return `
-    <article class="setup-card" data-specialties="${escapeHtml(specs)}">
-      <div class="card-header">
-        <a class="identity" href="${href}">
-          <span class="author">@${escapeHtml(d.id.author)}</span><span class="separator">/</span><span class="slug">${escapeHtml(d.id.slug)}</span>
-        </a>
-        <div class="specialties">${specsHtml}</div>
-      </div>
-      <h3 class="descriptor"><a href="${href}">${escapeHtml(d.title)}</a></h3>
-      <p class="description">${escapeHtml(d.description)}</p>
-      <div class="card-footer">
-        <span class="date">${d.createdAt.slice(0, 10)}</span>
-        <div class="tags">${tags}</div>
-      </div>
-    </article>
-  `;
+function avatarBg(seed) {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  const hue = h % 360;
+  return `hsl(${hue} 55% 45%)`;
 }
 
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function avatarChar(name) {
+  const s = String(name || '?').trim();
+  return (s.charAt(0) || '?').toUpperCase();
 }
 
-function markdownToHtml(md) {
-  if (!md) return '';
-  return md
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => `<pre><code>${escapeHtml(code.trim())}</code></pre>`)
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
-    .replace(/\n{2,}/g, '</p><p>')
-    .replace(/^(?!<[hup]|<li|<pre|<ul)(.+)$/gm, '<p>$1</p>')
-    .replace(/<p><\/p>/g, '');
-}
-
-function renderOverviewSection(d) {
-  if (!d.overview) return '';
-  return `<h2>About this setup</h2>\n<div class="overview-content">${markdownToHtml(d.overview)}</div>`;
-}
-
-function renderBundleSection(d) {
-  if (!d.bundle?.present || !d.bundle.files?.length) {
-    return '<p>No bundle (descriptor-only setup — only plugin/marketplace/MCP identifiers).</p>';
+async function extractBundleFiles(descriptor) {
+  const { author, slug } = descriptor.id;
+  const tarPath = join(BUNDLES_DIR, author, `${slug}.tar.gz`);
+  if (!existsSync(tarPath)) return null;
+  const tmp = join(tmpdir(), `cs-bundle-${author}-${slug}-${Date.now()}`);
+  await mkdir(tmp, { recursive: true });
+  try {
+    execFileSync('tar', ['-xzf', tarPath, '-C', tmp], { stdio: 'ignore' });
+  } catch (e) {
+    console.warn(`[bundle] extract failed for ${author}/${slug}: ${e.message}`);
+    await rm(tmp, { recursive: true, force: true });
+    return null;
   }
-  const rows = d.bundle.files.map(f => `
-    <tr>
-      <td><code>${escapeHtml(f.path)}</code></td>
-      <td>${f.size} bytes</td>
-      <td><code>${f.sha256.slice(0, 12)}…</code></td>
-    </tr>
-  `).join('');
-  const bundleUrl = `../../../bundles/${d.id.author}/${d.id.slug}.tar.gz`;
-  return `
-    <p>Download the bundle: <a href="${bundleUrl}">${d.id.slug}.tar.gz</a></p>
-    <table>
-      <thead><tr><th>path</th><th>size</th><th>sha256</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
+  const contents = new Map();
+  const walk = async (dir, prefix = '') => {
+    const entries = await readdir(dir, { withFileTypes: true });
+    for (const ent of entries) {
+      const abs = join(dir, ent.name);
+      const rel = prefix ? `${prefix}/${ent.name}` : ent.name;
+      if (ent.isDirectory()) { await walk(abs, rel); continue; }
+      if (!ent.isFile()) continue;
+      const st = await stat(abs);
+      if (st.size > MAX_FILE_BYTES) { contents.set(rel, { skipped: 'too-large' }); continue; }
+      if (!isTextFile(rel)) { contents.set(rel, { skipped: 'binary' }); continue; }
+      try {
+        const text = await readFile(abs, 'utf-8');
+        contents.set(rel, { text });
+      } catch { contents.set(rel, { skipped: 'read-error' }); }
+    }
+  };
+  await walk(tmp);
+  await rm(tmp, { recursive: true, force: true });
+  return contents;
 }
 
-function renderDetail(template, d) {
-  const mirror = `https://${process.env.GITHUB_REPOSITORY_OWNER || 'adhenawer'}.github.io/${process.env.GITHUB_REPOSITORY?.split('/')[1] || 'claude-setups-registry'}/s/${d.id.author}/${d.id.slug}.json`;
-  const specialtiesHtml = (d.specialties || []).map(s => `<span class="specialty">${escapeHtml(s)}</span>`).join('');
-  return template
-    .replace(/%%TITLE%%/g, escapeHtml(d.title))
-    .replace(/%%AUTHOR%%/g, escapeHtml(d.id.author))
-    .replace(/%%SLUG%%/g, escapeHtml(d.id.slug))
-    .replace(/%%SHORT_ID%%/g, escapeHtml(`${d.id.author}/${d.id.slug}`))
-    .replace(/%%AUTHOR_URL%%/g, escapeHtml(d.author.url))
-    .replace(/%%VERSION%%/g, String(d.version))
-    .replace(/%%CREATED_AT%%/g, d.createdAt.slice(0, 10))
-    .replace(/%%DESCRIPTION%%/g, escapeHtml(d.description))
-    .replace(/%%MIRROR_URL%%/g, mirror)
-    .replace(/%%SPECIALTIES_HTML%%/g, specialtiesHtml)
-    .replace(/%%DESCRIPTOR_JSON%%/g, escapeHtml(JSON.stringify(d, null, 2)))
-    .replace(/%%BUNDLE_SECTION%%/g, renderBundleSection(d))
-    .replace(/%%OVERVIEW_SECTION%%/g, renderOverviewSection(d));
+function computeStats(descriptor, fileList) {
+  const plugins = (descriptor.plugins || []).length;
+  const mcps = (descriptor.mcpServers || descriptor.mcps || []).length;
+  let hooks = 0, skills = 0;
+  for (const f of fileList) {
+    if (f.path.startsWith('hooks/')) hooks++;
+    else if (f.path.startsWith('skills/')) skills++;
+  }
+  return { plugins, mcps, hooks, skills };
+}
+
+async function toGalleryEntry(descriptor) {
+  const author = descriptor.id.author;
+  const slug = descriptor.id.slug;
+  const contents = await extractBundleFiles(descriptor);
+
+  const files = (descriptor.bundle?.files || []).map(f => {
+    const entry = contents?.get(f.path);
+    const kind = kindFor(f.path);
+    const base = { path: f.path, size: f.size, sha256: f.sha256, kind };
+    if (entry && entry.text != null) return { ...base, content: entry.text };
+    return base;
+  });
+
+  const mcps = (descriptor.mcpServers || []).map(m => ({
+    name: m.name || m.id || 'mcp',
+    cmd: m.command || m.cmd || (Array.isArray(m.args) ? m.args.join(' ') : ''),
+  }));
+
+  const plugins = (descriptor.plugins || []).map(p => ({
+    name: p.name,
+    version: p.version || 'unknown',
+    from: p.from || (p.marketplace ? `marketplace:${p.marketplace}` : 'npm'),
+    marketplace: p.marketplace,
+  }));
+
+  const stats = computeStats(descriptor, files);
+
+  return {
+    slug,
+    author,
+    authorName: descriptor.author?.handle || author,
+    authorUrl: descriptor.author?.url || `https://github.com/${author}`,
+    avatar: avatarChar(descriptor.author?.handle || author),
+    avatarBg: avatarBg(author + slug),
+    title: descriptor.title,
+    description: descriptor.description,
+    overview: descriptor.overview || '',
+    specialties: descriptor.specialties || [],
+    tags: descriptor.tags || [],
+    published: descriptor.createdAt,
+    mirrors: descriptor.mirrors || 0,
+    stats,
+    plugins,
+    mcps,
+    files,
+    bundleUrl: descriptor.bundle?.url || null,
+  };
+}
+
+async function copyDirIfExists(src, dst) {
+  if (!existsSync(src)) return false;
+  await cp(src, dst, { recursive: true });
+  return true;
 }
 
 async function build() {
+  await rm(OUT_DIR, { recursive: true, force: true });
   await mkdir(OUT_DIR, { recursive: true });
+
   await copyFile(join(SITE_DIR, 'styles.css'), join(OUT_DIR, 'styles.css'));
+  await copyFile(join(SITE_DIR, 'index.html'), join(OUT_DIR, 'index.html'));
+  await copyFile(join(SITE_DIR, 'app.js'), join(OUT_DIR, 'app.js'));
 
   const setups = await listSetups();
+  const specLabels = await loadSpecialtyLabels();
 
-  const uniqueSpecs = [...new Set(setups.flatMap(s => s.descriptor.specialties || []))].sort();
-  const options = uniqueSpecs.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+  const gallery = [];
+  for (const { descriptor } of setups) {
+    gallery.push(await toGalleryEntry(descriptor));
+  }
 
-  const indexTpl = await readFile(join(SITE_DIR, 'index.html'), 'utf-8');
-  const index = indexTpl
-    .replace('<!-- CARDS -->', setups.map(s => renderCard(s.descriptor)).join(''))
-    .replace('<!-- FILTER OPTIONS -->', options);
-  await writeFile(join(OUT_DIR, 'index.html'), index);
+  const js = 'window.SPECIALTY_LABELS=' + JSON.stringify(specLabels) + ';\n' +
+    'window.SETUPS_DATA=' + JSON.stringify(gallery) + ';\n';
+  await writeFile(join(OUT_DIR, 'setups.js'), js);
 
-  const detailTpl = await readFile(join(SITE_DIR, 'setup.html'), 'utf-8');
   for (const { descriptor } of setups) {
     const outDir = join(OUT_DIR, 's', descriptor.id.author);
     await mkdir(outDir, { recursive: true });
-    const outPath = join(outDir, `${descriptor.id.slug}.html`);
-    await writeFile(outPath, renderDetail(detailTpl, descriptor));
     await writeFile(
       join(outDir, `${descriptor.id.slug}.json`),
-      JSON.stringify(descriptor, null, 2)
+      JSON.stringify(descriptor, null, 2),
     );
   }
+
+  await copyDirIfExists(BUNDLES_DIR, join(OUT_DIR, 'bundles'));
+
   console.log(`Built site: ${setups.length} setup(s) → ${OUT_DIR}/`);
 }
 

@@ -1,34 +1,32 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light" data-aesthetic="playful">
 <head>
-  <meta charset="utf-8">
-  <title>claude-setups gallery</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>claude-setups · gallery</title>
+  <meta name="description" content="Public registry of Claude Code setups. Discover, share, and clone community configurations with a single command." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Fraunces:ital,wght@0,400;0,500;0,700;1,500;1,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23F97316'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-family='monospace' font-size='16' font-weight='700' fill='white'%3E%7B%7D%3C/text%3E%3C/svg%3E">
+  <script>
+    (function () {
+      try {
+        var saved = JSON.parse(localStorage.getItem('claude-setups.tweaks') || '{}');
+        if (saved.theme) document.documentElement.setAttribute('data-theme', saved.theme);
+        if (saved.aesthetic) document.documentElement.setAttribute('data-aesthetic', saved.aesthetic);
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
-  <header>
-    <h1>claude-setups</h1>
-    <p>Community Claude Code setups. Publish with <code>npx -y claude-setups publish</code>.</p>
-  </header>
-  <nav id="filters">
-    <label>Specialty:</label>
-    <select id="specialty-filter" aria-label="Filter by specialty">
-      <option value="">all</option>
-      <!-- FILTER OPTIONS -->
-    </select>
-  </nav>
-  <main id="setups-list">
-    <!-- CARDS -->
-  </main>
-  <script>
-    document.getElementById('specialty-filter').addEventListener('change', (e) => {
-      const val = e.target.value;
-      const cards = document.querySelectorAll('[data-specialties]');
-      for (const card of cards) {
-        const specs = (card.dataset.specialties || '').split(',');
-        card.style.display = (!val || specs.includes(val)) ? '' : 'none';
-      }
-    });
-  </script>
+  <header class="topbar" id="topbar"></header>
+  <main id="main"></main>
+  <footer class="footer">
+    MIT · built by the community · <a href="https://github.com/adhenawer/claude-setups-registry" target="_blank" rel="noreferrer">github.com/adhenawer/claude-setups-registry</a>
+  </footer>
+  <script src="setups.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

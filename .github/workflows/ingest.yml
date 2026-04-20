@@ -86,7 +86,7 @@ jobs:
           git add data/setups/ data/bundles/
           git commit -m "ingest: $AUTHOR/$SLUG (issue #$ISSUE_NUMBER)"
           git push
-          PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/s/$AUTHOR/$SLUG"
+          PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/#/setup/$AUTHOR/$SLUG"
           gh issue comment "$ISSUE_NUMBER" --body "Published: $PAGES_URL"
           gh issue close "$ISSUE_NUMBER"
       - name: Delete pending bundle branch (on success)
