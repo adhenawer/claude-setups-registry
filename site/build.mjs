@@ -45,6 +45,27 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+function renderBundleSection(d) {
+  if (!d.bundle?.present || !d.bundle.files?.length) {
+    return '<p>No bundle (descriptor-only setup — only plugin/marketplace/MCP identifiers).</p>';
+  }
+  const rows = d.bundle.files.map(f => `
+    <tr>
+      <td><code>${escapeHtml(f.path)}</code></td>
+      <td>${f.size} bytes</td>
+      <td><code>${f.sha256.slice(0, 12)}…</code></td>
+    </tr>
+  `).join('');
+  const bundleUrl = `../../../bundles/${d.id.author}/${d.id.slug}.tar.gz`;
+  return `
+    <p>Download the bundle: <a href="${bundleUrl}">${d.id.slug}.tar.gz</a></p>
+    <table>
+      <thead><tr><th>path</th><th>size</th><th>sha256</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
 function renderDetail(template, d) {
   const mirror = `https://${process.env.GITHUB_REPOSITORY_OWNER || 'adhenawer'}.github.io/${process.env.GITHUB_REPOSITORY?.split('/')[1] || 'claude-setups-registry'}/s/${d.id.author}/${d.id.slug}.json`;
   const specialtiesHtml = (d.specialties || []).map(s => `<span class="specialty">${escapeHtml(s)}</span>`).join('');
@@ -59,7 +80,8 @@ function renderDetail(template, d) {
     .replace(/%%DESCRIPTION%%/g, escapeHtml(d.description))
     .replace(/%%MIRROR_URL%%/g, mirror)
     .replace(/%%SPECIALTIES_HTML%%/g, specialtiesHtml)
-    .replace(/%%DESCRIPTOR_JSON%%/g, escapeHtml(JSON.stringify(d, null, 2)));
+    .replace(/%%DESCRIPTOR_JSON%%/g, escapeHtml(JSON.stringify(d, null, 2)))
+    .replace(/%%BUNDLE_SECTION%%/g, renderBundleSection(d));
 }
 
 async function build() {
