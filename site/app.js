@@ -48,6 +48,7 @@
     const h = (location.hash || '').replace(/^#/, '');
     const m = h.match(/^\/setup\/([^/]+)\/([^/]+)\/?$/);
     if (m) return { name: 'view', author: decodeURIComponent(m[1]), slug: decodeURIComponent(m[2]) };
+    if (h === '/docs' || h === '/docs/') return { name: 'docs' };
     return { name: 'index' };
   }
   function getTweak(k, fallback) {
@@ -161,6 +162,7 @@
       '<div class="topbar-left" data-act="home">' + LOGO_HTML +
       '<div class="brand">claude-setups<span class="brand-sub"> / gallery</span></div></div>' +
       '<div class="topbar-right">' +
+        '<a class="btn-ghost btn-ghost-sm" href="#/docs" data-act="docs">docs</a>' +
         '<a class="btn-ghost btn-ghost-sm" href="https://github.com/adhenawer/claude-setups-registry" target="_blank" rel="noreferrer">' +
         ICONS.github + ' repo</a>' +
         '<button class="iconbtn" data-act="theme" aria-label="Toggle theme">' +
@@ -631,9 +633,126 @@
     window.scrollTo(0, 0);
   }
 
+  // ===== Docs =====
+  const DOCS_MD = [
+    '# CLI reference',
+    '',
+    'Three commands from the [claude-setups](https://github.com/adhenawer/claude-setups) CLI talk to this registry. This page explains exactly what each one reads, writes, and guarantees.',
+    '',
+    '## publish',
+    '',
+    '`npx -y claude-setups publish [--with-bundle]`',
+    '',
+    'Packages your local Claude Code configuration into a descriptor and submits it to the registry as a GitHub Issue. The registry never sees your machine directly — you control what goes in.',
+    '',
+    '### What it publishes',
+    '',
+    '- **Descriptor JSON** — title, description, tags, 1–3 specialties, author handle.',
+    '- **Plugins list** — name, version, marketplace reference (no install scripts).',
+    '- **Marketplaces list** — `source + repo` so consumers know where plugins come from.',
+    '- **MCP servers** — `name`, `command`, `args`. The `env` block is **always stripped**: API keys and secrets never leave your machine.',
+    '- **Bundle** (optional, `--with-bundle`) — a tarball with files under fixed prefixes.',
+    '',
+    '### What the bundle can contain',
+    '',
+    '- `hooks/**` · `skills/**` · `commands/**` · `agents/**`',
+    '- Root-level markdown: `CLAUDE.md`, `RTK.md`, any `*.md`',
+    '',
+    '### What is NEVER published',
+    '',
+    '- `settings.json` / `settings.*` · `.claude.json` — **rejected at validation** if present in the tarball.',
+    '- MCP `env` values — silently removed before the descriptor is built.',
+    '- Absolute paths or `..` traversals in bundle files — rejected.',
+    '- Anything outside the allowed prefixes above — rejected.',
+    '',
+    '### The submission flow',
+    '',
+    '1. CLI opens a GitHub Issue labeled `setup:submission` with the descriptor as JSON.',
+    '2. If a bundle exists, CLI pushes it to a temporary branch `bundle/<author>-<slug>-<timestamp>`.',
+    '3. The [ingest action](https://github.com/adhenawer/claude-setups-registry/blob/master/.github/workflows/ingest.yml) validates schema, specialties, slug format, and bundle path safety.',
+    '4. On success: descriptor lands at `data/setups/<author>/<slug>.json`, bundle moves to `data/bundles/<author>/<slug>.tar.gz`, issue closes with the live URL.',
+    '5. On failure: issue is labeled `invalid` and commented with the exact reason.',
+    '',
+    '### Author lock',
+    '',
+    'The descriptor `author` field must match the GitHub user who opened the issue. You cannot publish on behalf of someone else.',
+    '',
+    '## mirror',
+    '',
+    '`npx -y claude-setups mirror <author>/<slug>`',
+    '',
+    'Installs a published setup locally. Fetches the descriptor JSON + bundle from Pages, installs plugins, registers MCP servers, extracts the bundle into `~/.claude/`.',
+    '',
+    '### What it writes to your machine',
+    '',
+    '- **Plugins** — each plugin is installed from its marketplace the same way `plugin add` would.',
+    '- **MCP servers** — registered via `claude mcp add`. Since the descriptor has no `env`, you must set API keys yourself after mirror.',
+    '- **Bundle files** — extracted under `~/.claude/` preserving their relative path (`hooks/foo.sh`, `skills/bar.md`, etc).',
+    '',
+    '### Overwrite rules',
+    '',
+    '- **Same path → replaced.** If you already have `~/.claude/hooks/on-save.sh` and the setup ships one with the same path, the mirror\'s version wins. Back up or commit local changes first.',
+    '- **`settings.json` and `.claude.json` are never touched.** They cannot be in a bundle, so mirror will not modify them. Your personal settings stay intact.',
+    '- **Plugin version conflicts** — if you have a different version of the same plugin installed, the CLI follows marketplace upgrade behavior. Usually the newer version wins.',
+    '',
+    '### Duplicate / identical files',
+    '',
+    'A mirror is a **full replace** of the paths it brings, not a diff. If two setups ship `skills/test-scaffold.md`, mirroring the second one overwrites the first — even if the contents are byte-for-byte identical. Nothing is merged. The registry does not try to detect or warn about collisions across mirrors.',
+    '',
+    '### What mirror does NOT do',
+    '',
+    '- Does not touch files outside `~/.claude/<prefix>/` paths declared in the bundle.',
+    '- Does not run any scripts from the bundle — files land on disk inert.',
+    '- Does not install the CLI itself or modify shell profiles.',
+    '- Does not send telemetry beyond opening the mirror-counter issue (increments the public `mirrors` count on the descriptor).',
+    '',
+    '## revoke',
+    '',
+    '`npx -y claude-setups revoke <slug>`',
+    '',
+    'Removes your published setup from the registry.',
+    '',
+    '### What it removes',
+    '',
+    '- `data/setups/<author>/<slug>.json` — deleted.',
+    '- `data/bundles/<author>/<slug>.tar.gz` — deleted.',
+    '- Gallery entry disappears on the next Pages rebuild (seconds).',
+    '',
+    '### Rules',
+    '',
+    '- **Only the original author can revoke.** The [moderation action](https://github.com/adhenawer/claude-setups-registry/blob/master/.github/workflows/moderate.yml) verifies that the issue opener matches the setup\'s `author` field.',
+    '- **Idempotent.** Revoking an already-revoked setup succeeds silently.',
+    '- **Not a takedown.** Anyone who already mirrored your setup still has the files locally. Revoke removes the *listing*, not copies already distributed.',
+    '',
+    '### The flow',
+    '',
+    '1. CLI opens an issue labeled `setup:revoke` with `{ "author": "...", "slug": "..." }` in the body.',
+    '2. The moderation workflow checks author ownership and deletes the files.',
+    '3. Pages rebuilds automatically; the setup disappears from the gallery.',
+    '',
+    '## Privacy boundary',
+    '',
+    'The registry is a pile of static JSON in a public repo. Everything you publish is public forever (git history keeps revoked content). **Review the descriptor preview the CLI shows before hitting submit** — once merged, the only recourse is revoke (which keeps the git history).',
+    '',
+    'Your secrets stay local: MCP `env`, `settings.json`, and `.claude.json` are filtered at publish time, blocked at validation, and never extracted by mirror.',
+  ].join('\n');
+
+  function renderDocs() {
+    const main = document.getElementById('main');
+    main.setAttribute('data-screen-label', '03 Docs');
+    main.innerHTML =
+      '<div class="view">' +
+        '<button class="backlink" data-act="home">' + ICONS.back + ' back to gallery</button>' +
+        '<article class="overview docs-article">' + renderMarkdown(DOCS_MD) + '</article>' +
+      '</div>';
+    main.querySelectorAll('[data-act=home]').forEach(el => el.addEventListener('click', goHome));
+    window.scrollTo(0, 0);
+  }
+
   // ===== Boot =====
   function render() {
     if (state.route.name === 'view') renderView();
+    else if (state.route.name === 'docs') renderDocs();
     else renderIndex();
   }
 
