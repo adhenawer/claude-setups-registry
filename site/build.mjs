@@ -32,11 +32,18 @@ function renderCard(d) {
   const href = `s/${d.id.author}/${d.id.slug}.html`;
   return `
     <article class="setup-card" data-specialties="${escapeHtml(specs)}">
-      <h2><a href="${href}">${escapeHtml(d.title)}</a></h2>
-      <p class="author">by <a href="${escapeHtml(d.author.url)}">${escapeHtml(d.id.author)}</a> · ${d.createdAt.slice(0, 10)}</p>
-      <p>${escapeHtml(d.description)}</p>
-      <div class="specialties">${specsHtml}</div>
-      <div class="tags">${tags}</div>
+      <div class="card-header">
+        <a class="identity" href="${href}">
+          <span class="author">@${escapeHtml(d.id.author)}</span><span class="separator">/</span><span class="slug">${escapeHtml(d.id.slug)}</span>
+        </a>
+        <div class="specialties">${specsHtml}</div>
+      </div>
+      <h3 class="descriptor"><a href="${href}">${escapeHtml(d.title)}</a></h3>
+      <p class="description">${escapeHtml(d.description)}</p>
+      <div class="card-footer">
+        <span class="date">${d.createdAt.slice(0, 10)}</span>
+        <div class="tags">${tags}</div>
+      </div>
     </article>
   `;
 }
