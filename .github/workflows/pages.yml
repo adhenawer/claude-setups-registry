@@ -7,6 +7,10 @@ on:
       - 'data/setups/**'
       - 'site/**'
       - '.github/workflows/pages.yml'
+  workflow_run:
+    workflows: ["ingest", "moderate"]
+    types: [completed]
+    branches: [main, master]
   workflow_dispatch:
 
 permissions:
@@ -20,6 +24,7 @@ concurrency:
 
 jobs:
   build:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
