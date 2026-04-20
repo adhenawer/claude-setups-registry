@@ -198,6 +198,9 @@ async function build() {
   await copyFile(join(SITE_DIR, 'styles.css'), join(OUT_DIR, 'styles.css'));
   await copyFile(join(SITE_DIR, 'index.html'), join(OUT_DIR, 'index.html'));
   await copyFile(join(SITE_DIR, 'app.js'), join(OUT_DIR, 'app.js'));
+  if (existsSync(join(SITE_DIR, 'CNAME'))) {
+    await copyFile(join(SITE_DIR, 'CNAME'), join(OUT_DIR, 'CNAME'));
+  }
 
   const setups = await listSetups();
   const specLabels = await loadSpecialtyLabels();
