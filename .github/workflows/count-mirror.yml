@@ -1,0 +1,72 @@
+name: count-mirror
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  count:
+    if: contains(github.event.issue.labels.*.name, 'mirror:count')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Increment mirror counter
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          node -e "
+          import('./scripts/count-mirror.mjs').then(async ({ countMirror }) => {
+            const r = await countMirror({
+              dataRoot: 'data',
+              issueBody: process.env.ISSUE_BODY,
+            });
+            if (!r.ok) {
+              console.error('COUNT_FAILED: ' + r.reason);
+              process.exit(2);
+            }
+            console.log('COUNT_OK: ' + r.path + ' mirrors=' + r.mirrors);
+          }).catch(e => { console.error(e); process.exit(1); });
+          "
+      - name: Commit + close
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          git config user.name "claude-setups-bot"
+          git config user.email "bot@claude-setups.dev"
+          git add -A data/setups
+          PUSH_OK=0
+          if git diff --cached --quiet; then
+            PUSH_OK=1
+          else
+            git commit -m "mirror: +1 (issue #$ISSUE_NUMBER)"
+            for i in 1 2 3; do
+              if git pull --rebase origin "$(git rev-parse --abbrev-ref HEAD)" && git push; then
+                PUSH_OK=1
+                break
+              fi
+              echo "Push failed, retry $i/3..."
+              sleep 2
+            done
+          fi
+          if [ "$PUSH_OK" != "1" ]; then
+            echo "::error::Failed to push mirror count commit"
+            exit 1
+          fi
+          gh issue close "$ISSUE_NUMBER"
+      - name: Close with comment on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          gh issue close "$ISSUE_NUMBER" --comment "Could not count this mirror (invalid body or setup not found)."

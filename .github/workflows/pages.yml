@@ -8,7 +8,7 @@ on:
       - 'site/**'
       - '.github/workflows/pages.yml'
   workflow_run:
-    workflows: ["ingest", "moderate"]
+    workflows: ["ingest", "moderate", "count-mirror"]
     types: [completed]
     branches: [main, master]
   workflow_dispatch:
