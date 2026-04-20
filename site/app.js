@@ -508,11 +508,18 @@
     const rows = setup.plugins.map(p => {
       const src = p.from || p.marketplace || '';
       const srcLabel = p.marketplace ? 'marketplace:' + p.marketplace : (src || 'npm');
+      const url = p.marketplaceUrl;
+      const nameHtml = url
+        ? '<a class="plugin-name mono" href="' + esc(url) + '" target="_blank" rel="noreferrer">' + esc(p.name) + '</a>'
+        : '<span class="plugin-name mono">' + esc(p.name) + '</span>';
+      const fromHtml = url
+        ? '<a class="plugin-from" href="' + esc(url) + '" target="_blank" rel="noreferrer">' + esc(srcLabel) + '</a>'
+        : '<span class="plugin-from">' + esc(srcLabel) + '</span>';
       return '<li class="plugin-row">' +
         '<span class="plugin-icon">' + ICONS.plug + '</span>' +
-        '<span class="plugin-name mono">' + esc(p.name) + '</span>' +
+        nameHtml +
         '<span class="plugin-version mono">v' + esc(p.version || '?') + '</span>' +
-        '<span class="plugin-from">' + esc(srcLabel) + '</span>' +
+        fromHtml +
       '</li>';
     }).join('');
     return sectionHtml('Plugins', setup.plugins.length, '<ul class="plugin-list">' + rows + '</ul>');

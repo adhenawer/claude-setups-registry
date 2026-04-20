@@ -154,11 +154,17 @@ async function toGalleryEntry(descriptor) {
     cmd: m.command || m.cmd || (Array.isArray(m.args) ? m.args.join(' ') : ''),
   }));
 
+  const marketplaceMap = {};
+  for (const m of (descriptor.marketplaces || [])) {
+    if (m.source === 'github' && m.repo) marketplaceMap[m.name] = `https://github.com/${m.repo}`;
+    else if (m.url) marketplaceMap[m.name] = m.url;
+  }
   const plugins = (descriptor.plugins || []).map(p => ({
     name: p.name,
     version: p.version || 'unknown',
     from: p.from || (p.marketplace ? `marketplace:${p.marketplace}` : 'npm'),
     marketplace: p.marketplace,
+    marketplaceUrl: p.marketplace ? (marketplaceMap[p.marketplace] || null) : null,
   }));
 
   const stats = computeStats(descriptor, files);
